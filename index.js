@@ -2,7 +2,7 @@
 //   try {
 //     // check device active
 //     let res = await fetch(
-//       "https://developers.quantm2004.com/api/v1/devices/2a42bc399905?apikey=LsJQ1NKETw_Jtc6Y7WD6r"
+//       "${url}/devices/2a42bc399905?apikey=LsJQ1NKETw_Jtc6Y7WD6r"
 //     );
 //     let json = await res.json();
 //     console.log(0);
@@ -41,7 +41,7 @@
 //         if (isEmptyObject(resultJson)) {
 //           // set device inactive
 //           await fetch(
-//             "https://developers.quantm2004.com/api/v1/devices/2a42bc399905?apikey=LsJQ1NKETw_Jtc6Y7WD6r",
+//             "${url}/devices/2a42bc399905?apikey=LsJQ1NKETw_Jtc6Y7WD6r",
 //             {
 //               method: "PUT",
 //               headers: {
@@ -67,6 +67,7 @@ const express = require("express");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const cors = require("cors");
+const url = "https://qunpcdevelopers.quantm2004.com"
 
 const app = express();
 const PORT = 3000;
@@ -169,24 +170,33 @@ io.on("connection", (socket) => {
           });
           let resultJson = await result.json();
           console.log("🔥 Result: ", resultJson);
+        } else if (message.split("|")[2] === "ZING") {
+          console.log("🔥 ZING: " + message.split("|")[3]);
+          let proxy = await fetch(
+            `${deviceJson.metadata.proxy.split("|")[1]}`, {
+            headers: {
+              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2N2MwNDUzMTM3NjMzZDY0Y2EzMTMzNjUiLCJpYXQiOjE3NDExNjk2MjIsImV4cCI6MTc0ODk0NTYyMn0.0THCPTJmxULO1S-LLHnyXdOFkoAEBocXOskUrPsmFdY'
+            }
+          }
+          );
         }
-      } catch (error) {}
+      } catch (error) { }
     }
 
     if (message.startsWith("NoInternet")) {
       try {
         let mac = message.split("|")[1];
         let device = await fetch(
-          `https://developers.quantm2004.com/api/v1/devices/${message.split("|")[2]}?apikey=LsJQ1NKETw_Jtc6Y7WD6r`
+          `${url}/devices/${message.split("|")[2]}?apikey=LsJQ1NKETw_Jtc6Y7WD6r`
         );
         let deviceJson = await device.json();
-        
+
         if (deviceJson.metadata.proxy.split("|")[0] === "WW") {
           let proxyResponse = await fetch(
             `https://wwproxy.com/api/client/proxy/current?key=${deviceJson.metadata.proxy.split("|")[1]}`
           );
           let proxyJson = await proxyResponse.json();
-    
+
           // If the proxy is unavailable, fetch a new available proxy
           if (proxyJson.message.includes("không tồn tại trên hệ thống") || proxyJson.message.includes("Key hiện đang không")) {
             proxyResponse = await fetch(
@@ -194,9 +204,9 @@ io.on("connection", (socket) => {
             );
             proxyJson = await proxyResponse.json();
           }
-    
+
           console.log(proxyJson);
-          
+
           // Now you can use the proxy data without re-reading the body
           let result = await fetch("http://192.168.105.1/api/v1/assign-proxy", {
             method: "POST",
@@ -209,7 +219,7 @@ io.on("connection", (socket) => {
               },
             }),
           });
-          
+
           let resultJson = await result.json();
           console.log("🔥 Result: ", resultJson);
         } else if (deviceJson.metadata.proxy.split("|")[0] === "Rai") {
@@ -217,7 +227,7 @@ io.on("connection", (socket) => {
             `https://be.raiproxy.com/api/package/${deviceJson.metadata.proxy.split("|")[1]}`
           );
           let proxyJson = await proxyResponse.json();
-    
+
           // If the proxy is unavailable, fetch a new available proxy
           if (!proxyJson.result.http) {
             proxyResponse = await fetch(
@@ -225,9 +235,9 @@ io.on("connection", (socket) => {
             );
             proxyJson = await proxyResponse.json();
           }
-    
+
           console.log(proxyJson);
-          
+
           // Now you can use the proxy data without re-reading the body
           let result = await fetch("http://192.168.105.1/api/v1/assign-proxy", {
             method: "POST",
@@ -240,7 +250,32 @@ io.on("connection", (socket) => {
               },
             }),
           });
-          
+
+          let resultJson = await result.json();
+          console.log("🔥 Result: ", resultJson);
+        } else if (deviceJson.metadata.proxy.split("|")[0] === "ZING") {
+          let proxyResponse = await fetch(
+            `${deviceJson.metadata.proxy.split("|")[1]}`, {
+            headers: {
+              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2N2MwNDUzMTM3NjMzZDY0Y2EzMTMzNjUiLCJpYXQiOjE3NDExNjk2MjIsImV4cCI6MTc0ODk0NTYyMn0.0THCPTJmxULO1S-LLHnyXdOFkoAEBocXOskUrPsmFdY'
+            }
+          }
+          );
+          let proxyJson = await proxyResponse.json();
+
+          // Now you can use the proxy data without re-reading the body
+          let result = await fetch("http://192.168.105.1/api/v1/assign-proxy", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              mac_proxy: {
+                [mac]: `http://${proxyJson.info.username}:${proxyJson.info.password}@${proxyJson.info.hostIp}:${proxyJson.info.portHttp}`,
+              },
+            }),
+          });
+
           let resultJson = await result.json();
           console.log("🔥 Result: ", resultJson);
         }
@@ -248,7 +283,7 @@ io.on("connection", (socket) => {
         console.log(error);
       }
     }
-    
+
   });
 
   socket.on("disconnect", () => {
